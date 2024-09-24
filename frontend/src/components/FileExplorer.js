@@ -18,6 +18,8 @@ const FileExplorer = () => {
   const itemsPerPage = 20;
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const baseUrl = `${window.location.protocol}//${window.location.host}`;
+
   useEffect(() => {
     fetchSourcePaths();
   }, []);
@@ -33,7 +35,7 @@ const FileExplorer = () => {
 
   const fetchSourcePaths = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/source-paths');
+      const response = await axios.get(`${baseUrl}/api/source-paths`);
       setSourcePaths(response.data.paths);
       setActiveTab(0);
     } catch (err) {
@@ -45,7 +47,7 @@ const FileExplorer = () => {
     setLoading(prev => ({ ...prev, [tabIndex]: true }));
     setError(null);
     try {
-      const response = await axios.get(`http://localhost:8000/api/files?path=${encodeURIComponent(path)}&page=${pageNum}&limit=${itemsPerPage}`);
+      const response = await axios.get(`${baseUrl}/api/files?path=${encodeURIComponent(path)}&page=${pageNum}&limit=${itemsPerPage}`);
       let fetchedFiles = response.data.items;
       if (sortOrder === 'lastModified') {
         fetchedFiles.sort((a, b) => b.lastModified - a.lastModified);
@@ -103,7 +105,7 @@ const FileExplorer = () => {
       const fetchPreview = async () => {
         if (file.type !== 'directory' && file.name.match(/\.(jpeg|jpg|gif|png)$/)) {
           try {
-            const response = await axios.get(`http://localhost:8000/api/preview?path=${encodeURIComponent(filePath)}`);
+            const response = await axios.get(`${baseUrl}/api/preview?path=${encodeURIComponent(filePath)}`);
             setPreview(response.data.content);
           } catch (err) {
             console.error('Error fetching preview', err);

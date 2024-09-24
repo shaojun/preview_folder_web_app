@@ -6,6 +6,8 @@ const FilePreview = ({ file }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const baseUrl = `${window.location.protocol}//${window.location.host}`;
+
   useEffect(() => {
     if (!file || !file.path) {
       setLoading(false);
@@ -16,7 +18,7 @@ const FilePreview = ({ file }) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:8000/api/preview?path=${encodeURIComponent(file.path)}`);
+        const response = await axios.get(`${baseUrl}/api/preview?path=${encodeURIComponent(file.path)}`);
         setPreview(response.data.content);
       } catch (err) {
         setError('Error fetching file preview');
@@ -25,13 +27,13 @@ const FilePreview = ({ file }) => {
     };
 
     fetchPreview();
-  }, [file]);
+  }, [file, baseUrl]);
 
   const handleDownload = async () => {
     if (!file || !file.path) return;
 
     try {
-      const response = await axios.get(`http://localhost:8000/api/download?path=${encodeURIComponent(file.path)}`, {
+      const response = await axios.get(`${baseUrl}/api/download?path=${encodeURIComponent(file.path)}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
