@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const FilePreview = ({ file }) => {
+const FilePreview = ({ file, baseUrl }) => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
   useEffect(() => {
     if (!file || !file.path) {

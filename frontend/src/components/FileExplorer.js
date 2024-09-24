@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { FaFolder, FaFile } from 'react-icons/fa';
+import { FaFolder, FaFile, FaImage } from 'react-icons/fa';
 import './FileExplorer.css';
 import FilePreview from './FilePreview';
 
@@ -17,7 +17,7 @@ const FileExplorer = () => {
   const [iconSize, setIconSize] = useState('normal');
   const itemsPerPage = 20;
   const [selectedFile, setSelectedFile] = useState(null);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState({});
 
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
@@ -25,26 +25,7 @@ const FileExplorer = () => {
     fetchSourcePaths();
   }, []);
 
-  useEffect(() => {
-    if (sourcePaths.length > 0) {
-      sourcePaths.forEach((path, index) => {
-        setCurrentPaths(prev => ({ ...prev, [index]: path }));
-        fetchFiles(path, 1, index);
-      });
-    }
-  }, [sourcePaths, sortOrder]);
-
-  const fetchSourcePaths = async () => {
-    try {
-      const response = await axios.get(`${baseUrl}/api/source-paths`);
-      setSourcePaths(response.data.paths);
-      setActiveTab(0);
-    } catch (err) {
-      setError('Error fetching source paths');
-    }
-  };
-
-  const fetchFiles = async (path, pageNum, tabIndex, currentFilter = filter) => {
+  const fetchFiles = useCallback(async (path, pageNum, tabIndex, currentFilter = '') => {
     setLoading(prev => ({ ...prev, [tabIndex]: true }));
     setError(null);
     try {
@@ -53,7 +34,7 @@ const FileExplorer = () => {
           path: encodeURIComponent(path),
           page: pageNum,
           limit: itemsPerPage,
-          filter: currentFilter || undefined // Only send filter if it's not empty
+          filter: currentFilter || undefined
         }
       });
       let fetchedFiles = response.data.items;
@@ -74,6 +55,25 @@ const FileExplorer = () => {
       setError(`Error fetching files for ${path}`);
     }
     setLoading(prev => ({ ...prev, [tabIndex]: false }));
+  }, [baseUrl, itemsPerPage, sortOrder]);
+
+  useEffect(() => {
+    if (sourcePaths.length > 0) {
+      sourcePaths.forEach((path, index) => {
+        setCurrentPaths(prev => ({ ...prev, [index]: path }));
+        fetchFiles(path, 1, index);
+      });
+    }
+  }, [sourcePaths, fetchFiles]);
+
+  const fetchSourcePaths = async () => {
+    try {
+      const response = await axios.get(`${baseUrl}/api/source-paths`);
+      setSourcePaths(response.data.paths);
+      setActiveTab(0);
+    } catch (err) {
+      setError('Error fetching source paths');
+    }
   };
 
   const loadMore = () => {
@@ -106,45 +106,30 @@ const FileExplorer = () => {
     fetchFiles(newPath, 1, activeTab);
   };
 
-  const FileIcon = ({ file, filePath, iconSize }) => {
-    const [preview, setPreview] = useState(null);
-
-    useEffect(() => {
-      const fetchPreview = async () => {
-        if (file.type !== 'directory' && file.name.match(/\.(jpeg|jpg|gif|png)$/)) {
-          try {
-            const response = await axios.get(`${baseUrl}/api/preview?path=${encodeURIComponent(filePath)}`);
-            setPreview(response.data.content);
-          } catch (err) {
-            console.error('Error fetching preview', err);
-          }
-        }
-      };
-      fetchPreview();
-    }, [filePath]);
-
+  const FileIcon = ({ file, iconSize }) => {
     const sizeClass = `icon-${iconSize}`;
 
     if (file.type === 'directory') {
       return <FaFolder className={sizeClass} />;
-    } else if (preview) {
-      return <img src={preview} alt={file.name} className={sizeClass} />;
+    } else if (file.image_base64) {
+      return <img src={`data:image/jpeg;base64,${file.image_base64}`} alt={file.name} className={`${sizeClass} file-icon-image`} />;
+    } else if (file.name.match(/\.(jpeg|jpg|gif|png)$/i)) {
+      return <FaImage className={sizeClass} />;
     } else {
       return <FaFile className={sizeClass} />;
     }
   };
 
   const getIcon = (file) => {
-    const filePath = `${currentPaths[activeTab]}/${file.name}`;
-    return <FileIcon file={file} filePath={filePath} iconSize={iconSize} />;
+    return <FileIcon file={file} iconSize={iconSize} />;
   };
 
   const handleFilterChange = (e) => {
     const newFilter = e.target.value;
-    setFilter(newFilter);
-    setFiles({});
-    setPage({});
-    setHasMore({});
+    setFilter(prev => ({ ...prev, [activeTab]: newFilter }));
+    setFiles(prev => ({ ...prev, [activeTab]: [] }));
+    setPage(prev => ({ ...prev, [activeTab]: 1 }));
+    setHasMore(prev => ({ ...prev, [activeTab]: false }));
     fetchFiles(currentPaths[activeTab], 1, activeTab, newFilter);
   };
 
@@ -189,7 +174,7 @@ const FileExplorer = () => {
                 <label>Filter: </label>
                 <input
                   type="text"
-                  value={filter}
+                  value={filter[activeTab] || ''}
                   onChange={handleFilterChange}
                   placeholder="Filter files and folders"
                 />
@@ -200,7 +185,11 @@ const FileExplorer = () => {
                 <>
                   <ul className="file-list">
                     {(files[activeTab] || []).map((file) => (
-                      <li key={file.name} onClick={() => handleFileClick(file)}>
+                      <li 
+                        key={file.name} 
+                        onClick={() => handleFileClick(file)}
+                        className={selectedFile && selectedFile.name === file.name && selectedFile.path === `${currentPaths[activeTab]}/${file.name}` ? 'selected' : ''}
+                      >
                         {getIcon(file)} {file.name}
                       </li>
                     ))}
@@ -216,7 +205,7 @@ const FileExplorer = () => {
         </div>
         <div className="preview-container">
           {selectedFile ? (
-            <FilePreview file={selectedFile} />
+            <FilePreview file={selectedFile} baseUrl={baseUrl} />
           ) : (
             <div className="no-preview">No file selected</div>
           )}
