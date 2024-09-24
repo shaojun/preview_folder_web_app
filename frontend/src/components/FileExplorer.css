@@ -1,0 +1,67 @@
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.explorer-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.file-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.preview-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  border-left: 1px solid #ccc;
+}
+
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-preview pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.file-explorer .tabs {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 20px;
+}
+
+.file-explorer .tab {
+  padding: 10px 20px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  margin-right: 5px;
+  border-radius: 5px 5px 0 0;
+  transition: all 0.3s ease;
+}
+
+.file-explorer .tab:hover {
+  background-color: #e0e0e0;
+}
+
+.file-explorer .tab.active {
+  background-color: #007bff;
+  color: white;
+  border-bottom: 2px solid #0056b3;
+}
+
+.file-explorer .tab.active:hover {
+  background-color: #0056b3;
+}
