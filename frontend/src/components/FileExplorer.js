@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFolder, FaFile } from 'react-icons/fa';
-import './FileExplorer.css'; // Make sure to create this CSS file
-import FilePreview from './FilePreview'; // We'll create this component next
+import './FileExplorer.css';
+import FilePreview from './FilePreview';
 
 const FileExplorer = () => {
   const [sourcePaths, setSourcePaths] = useState([]);
@@ -17,6 +17,7 @@ const FileExplorer = () => {
   const [iconSize, setIconSize] = useState('normal');
   const itemsPerPage = 20;
   const [selectedFile, setSelectedFile] = useState(null);
+  const [filter, setFilter] = useState('');
 
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
@@ -43,11 +44,18 @@ const FileExplorer = () => {
     }
   };
 
-  const fetchFiles = async (path, pageNum, tabIndex) => {
+  const fetchFiles = async (path, pageNum, tabIndex, currentFilter = filter) => {
     setLoading(prev => ({ ...prev, [tabIndex]: true }));
     setError(null);
     try {
-      const response = await axios.get(`${baseUrl}/api/files?path=${encodeURIComponent(path)}&page=${pageNum}&limit=${itemsPerPage}`);
+      const response = await axios.get(`${baseUrl}/api/files`, {
+        params: {
+          path: encodeURIComponent(path),
+          page: pageNum,
+          limit: itemsPerPage,
+          filter: currentFilter || undefined // Only send filter if it's not empty
+        }
+      });
       let fetchedFiles = response.data.items;
       if (sortOrder === 'lastModified') {
         fetchedFiles.sort((a, b) => b.lastModified - a.lastModified);
@@ -84,7 +92,7 @@ const FileExplorer = () => {
       const newPath = `${currentPaths[activeTab]}/${file.name}`;
       setCurrentPaths(prev => ({ ...prev, [activeTab]: newPath }));
       fetchFiles(newPath, 1, activeTab);
-      setSelectedFile(null); // Clear selected file when navigating
+      setSelectedFile(null);
     } else {
       const filePath = `${currentPaths[activeTab]}/${file.name}`;
       setSelectedFile({ ...file, path: filePath });
@@ -131,6 +139,15 @@ const FileExplorer = () => {
     return <FileIcon file={file} filePath={filePath} iconSize={iconSize} />;
   };
 
+  const handleFilterChange = (e) => {
+    const newFilter = e.target.value;
+    setFilter(newFilter);
+    setFiles({});
+    setPage({});
+    setHasMore({});
+    fetchFiles(currentPaths[activeTab], 1, activeTab, newFilter);
+  };
+
   return (
     <div className="file-explorer">
       <div className="explorer-content">
@@ -167,6 +184,15 @@ const FileExplorer = () => {
                   <option value="normal">Normal</option>
                   <option value="small">Small</option>
                 </select>
+              </div>
+              <div>
+                <label>Filter: </label>
+                <input
+                  type="text"
+                  value={filter}
+                  onChange={handleFilterChange}
+                  placeholder="Filter files and folders"
+                />
               </div>
               {loading[activeTab] ? (
                 <div>Loading files...</div>

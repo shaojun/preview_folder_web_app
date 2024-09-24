@@ -20,12 +20,22 @@ async def get_source_paths():
     return {"paths": ROOT_PATHS}
 
 @router.get("/api/files")
-async def list_files(path: str = "", page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100)):
+async def list_files(
+    path: str = "", 
+    page: int = Query(1, ge=1), 
+    limit: int = Query(20, ge=1, le=100),
+    filter: str = Query(None, description="Filter string for file or folder names")
+):
     path = urllib.parse.unquote(path)
     for root_path in ROOT_PATHS:
         full_path = os.path.join(root_path, path)
         if os.path.exists(full_path):
             contents = get_directory_contents(full_path)
+            
+            # Apply filter if provided
+            if filter:
+                contents = [item for item in contents if filter.lower() in item['name'].lower()]
+            
             start = (page - 1) * limit
             end = start + limit
             return {
